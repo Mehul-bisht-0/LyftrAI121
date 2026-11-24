@@ -68,6 +68,7 @@ export function ChatComposer({ onSend, disabled }: Props) {
         >
           <textarea
             ref={textareaRef}
+            data-testid="chat-input"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -97,6 +98,7 @@ export function ChatComposer({ onSend, disabled }: Props) {
               onClick={handleSend}
               disabled={!canSend}
               aria-label="Send"
+              data-testid="send-button"
               className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 shrink-0"
               style={
                 canSend

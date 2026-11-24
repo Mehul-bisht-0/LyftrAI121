@@ -25,7 +25,7 @@ const cacheMetadata: ReplyMetadata = {
 
 const fallbackMetadata: ReplyMetadata = {
   resolution_source: "LIVE_INFERENCE",
-  model: "groq/llama-3.1-8b-instant",
+  model: "groq/qwen/qwen3-8b",
   latency_ms: 890,
   input_tokens: 20,
   output_tokens: 12,
@@ -37,22 +37,28 @@ describe("AssistantMessage", () => {
   it("renders all required data-testid attributes", () => {
     render(<AssistantMessage content="Hello" metadata={liveMetadata} />);
     expect(screen.getByTestId("assistant-message")).toBeInTheDocument();
-    expect(screen.getByTestId("metadata-source")).toBeInTheDocument();
-    expect(screen.getByTestId("metadata-model")).toBeInTheDocument();
-    expect(screen.getByTestId("metadata-latency")).toBeInTheDocument();
-    expect(screen.getByTestId("metadata-tokens")).toBeInTheDocument();
+    expect(screen.getByTestId("meta-source")).toBeInTheDocument();
+    expect(screen.getByTestId("meta-model")).toBeInTheDocument();
+    expect(screen.getByTestId("meta-latency")).toBeInTheDocument();
+    expect(screen.getByTestId("meta-input-tokens")).toBeInTheDocument();
+    expect(screen.getByTestId("meta-output-tokens")).toBeInTheDocument();
     expect(screen.getByTestId("metadata-key")).toBeInTheDocument();
     expect(screen.getByTestId("metadata-fallback")).toBeInTheDocument();
   });
 
-  it("shows LIVE_INFERENCE source", () => {
+  it("shows LIVE_INFERENCE source string", () => {
     render(<AssistantMessage content="hi" metadata={liveMetadata} />);
-    expect(screen.getByTestId("metadata-source").textContent).toContain("live");
+    expect(screen.getByTestId("meta-source").textContent).toContain("LIVE_INFERENCE");
   });
 
-  it("shows LLM_CACHE source", () => {
+  it("shows LLM_CACHE source string", () => {
     render(<AssistantMessage content="hi" metadata={cacheMetadata} />);
-    expect(screen.getByTestId("metadata-source").textContent).toContain("cache");
+    expect(screen.getByTestId("meta-source").textContent).toContain("LLM_CACHE");
+  });
+
+  it("shows full model name", () => {
+    render(<AssistantMessage content="hi" metadata={liveMetadata} />);
+    expect(screen.getByTestId("meta-model").textContent).toContain("gemini/gemini-2.5-flash-lite");
   });
 
   it("shows null key_id as 'cache'", () => {
@@ -70,16 +76,20 @@ describe("AssistantMessage", () => {
     expect(screen.getByTestId("metadata-fallback").textContent).toContain("1");
   });
 
-  it("shows latency_ms", () => {
+  it("shows latency_ms with space before ms", () => {
     render(<AssistantMessage content="hi" metadata={liveMetadata} />);
-    expect(screen.getByTestId("metadata-latency").textContent).toContain("342");
+    expect(screen.getByTestId("meta-latency").textContent).toContain("342");
+    expect(screen.getByTestId("meta-latency").textContent).toContain("ms");
   });
 
-  it("shows token counts", () => {
+  it("shows input token count", () => {
     render(<AssistantMessage content="hi" metadata={liveMetadata} />);
-    const tokenEl = screen.getByTestId("metadata-tokens");
-    expect(tokenEl.textContent).toContain("15");
-    expect(tokenEl.textContent).toContain("8");
+    expect(screen.getByTestId("meta-input-tokens").textContent).toContain("15");
+  });
+
+  it("shows output token count", () => {
+    render(<AssistantMessage content="hi" metadata={liveMetadata} />);
+    expect(screen.getByTestId("meta-output-tokens").textContent).toContain("8");
   });
 
   it("renders reply content", () => {

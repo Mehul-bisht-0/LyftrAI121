@@ -84,6 +84,7 @@ export function ResilienceLab({ config, onChange }: Props) {
               </span>
             </label>
             <textarea
+              data-testid="system-prompt-input"
               value={config.systemPrompt}
               onChange={(e) => onChange({ ...config, systemPrompt: e.target.value })}
               placeholder="Optional extra context for the AI…"

@@ -95,7 +95,7 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
           <div className="flex flex-wrap gap-1.5 pl-0.5">
             {/* Source — most prominent */}
             <span
-              data-testid="metadata-source"
+              data-testid="meta-source"
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border"
               style={
                 isCache
@@ -112,16 +112,13 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
               }
             >
               {isCache ? <Zap size={10} strokeWidth={2.5} /> : <Radio size={10} strokeWidth={2.5} />}
-              {isCache ? "cache" : "live"}
+              {isCache ? "LLM_CACHE" : "LIVE_INFERENCE"}
             </span>
 
-            <MetaChip icon={Layers}  value={modelShort}                       testId="metadata-model"    />
-            <MetaChip icon={Clock}   value={`${metadata.latency_ms}ms`}       testId="metadata-latency"  />
-            <MetaChip
-              icon={Layers}
-              value={`${metadata.input_tokens}↑ ${metadata.output_tokens}↓`}
-              testId="metadata-tokens"
-            />
+            <MetaChip icon={Layers} value={metadata.model}               testId="meta-model"         />
+            <MetaChip icon={Clock}  value={`${metadata.latency_ms} ms`}  testId="meta-latency"       />
+            <MetaChip icon={Layers} value={String(metadata.input_tokens)} testId="meta-input-tokens"  />
+            <MetaChip icon={Layers} value={String(metadata.output_tokens)} testId="meta-output-tokens" />
             <MetaChip
               icon={Key}
               value={metadata.key_id ?? "cache"}

@@ -1,236 +1,190 @@
 # Relay AI
 
-Fault-tolerant, multi-provider LLM chatbot built for the Lyftr AI Full-Stack Engineering Assignment.
+Fault-tolerant, multi-provider LLM chatbot — Lyftr AI Full-Stack Engineering Assignment.
 
-**Live demo:** `https://<vercel-url>` · **API:** `https://<railway-url>`
-
-[![CI](https://github.com/<owner>/relay-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/<owner>/relay-ai/actions/workflows/ci.yml)
+[![CI](https://github.com/mehulbisht/relay-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/mehulbisht/relay-ai/actions/workflows/ci.yml)
 
 ---
 
-## Overview
+## 1. Live URLs
 
-Relay AI is a full-stack chat application that demonstrates:
+| Service  | URL |
+|----------|-----|
+| Frontend | `https://<your-vercel-url>` |
+| Backend  | `https://<your-railway-url>` |
 
-- **Fault-tolerant LLM routing** — Gemini 2.5 Flash Lite as primary (`key_1`), Groq Llama 3.1 8B as automatic fallback (`key_2`) on 429/5xx errors
-- **Response caching** — LiteLLM in-memory local cache with SHA-256 identity keyed on model + full conversation context
-- **Multi-turn memory** — conversation history stored in SQLite, reconstructed server-side for every request
-- **Resilience Lab** — optional system prompt and per-request failure simulation via `X-Simulate-Failure` header
-- **Zero external dependencies** — no Redis, no PostgreSQL, no separate proxy
+Both are public, require no login, and are connected to each other.
 
-**Stack:** React 18 + TypeScript + Vite + Tailwind · FastAPI + Python 3.11 · LiteLLM 1.110.3 · SQLite + aiosqlite · Railway + Vercel
+Quick sanity check:
+```bash
+curl https://<your-railway-url>/health
+# {"status":"ok","keys_configured":2,"cache_enabled":true}
+```
 
 ---
 
-## Setup
+## 2. Run locally: with Docker and without
 
-### Prerequisites
-
-- Python 3.11+ and Node.js 20+
-- Docker and Docker Compose (for local stack)
-- API keys: [Google AI Studio](https://aistudio.google.com) (Gemini) and [Groq Console](https://console.groq.com) (Groq)
-
-### Local development
+### With Docker (recommended)
 
 ```bash
 # 1. Clone
-git clone https://github.com/<owner>/relay-ai && cd relay-ai
+git clone https://github.com/mehulbisht/relay-ai && cd relay-ai
 
 # 2. Configure
 cp .env.example .env
-# Fill in GEMINI_API_KEY and GROQ_API_KEY in .env
+# Edit .env — set LLM_API_KEYS=<gemini_key>,<groq_key>
 
 # 3. Start the full stack
 make up
 # → Frontend: http://localhost:3000
 # → Backend:  http://localhost:8000
+
+make down   # stop containers (volume data persists)
+make logs   # tail logs from both services
 ```
 
-### Native backend (without Docker)
+The `docker-compose.yml` creates a named volume mounted at `/data` in the backend container, so SQLite history survives `make down / make up` cycles.
 
+### Without Docker
+
+**Backend:**
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.in
-GEMINI_API_KEY=... GROQ_API_KEY=... uvicorn app.main:app --reload
+LLM_API_KEYS=<gemini_key>,<groq_key> uvicorn app.main:app --reload --port 8000
 ```
 
-### Native frontend
-
+**Frontend:**
 ```bash
 cd frontend
 npm install
 VITE_API_BASE_URL=http://localhost:8000 npm run dev
+# → http://localhost:3000
 ```
+
+### Environment variables
+
+| Variable | Required | Meaning |
+|----------|----------|---------|
+| `LLM_API_KEYS` | Yes* | Comma-separated key pool: `key1,key2`. Key ids assigned as `key_1`, `key_2`, … |
+| `GEMINI_API_KEY` | Yes* | Gemini API key (alternative to `LLM_API_KEYS`) |
+| `GROQ_API_KEY` | Yes* | Groq API key (alternative to `LLM_API_KEYS`) |
+| `DATABASE_URL` | No | SQLite path (default: `sqlite:///./data/app.db`) |
+| `ALLOWED_ORIGINS` | No | Comma-separated CORS origins |
+| `ENABLE_FAILURE_SIMULATION` | No | `true` enables `X-Simulate-Failure` header |
+
+*Either `LLM_API_KEYS` or both individual key vars must be set.
 
 ---
 
-## Architecture
+## 3. Design decisions: key fallback, caching, SQLite session storage
 
-```
-Browser (Vercel)
-  └─ React SPA — session_id = crypto.randomUUID() per page load
-       └─ POST /chat  {session_id, message, [system_prompt]}
-            └─ FastAPI (Railway · 1 Uvicorn worker · 1 replica)
-                 ├─ Pydantic validation
-                 ├─ Per-session asyncio.Lock (serialises concurrent turns)
-                 ├─ aiosqlite (WAL · foreign keys · busy_timeout=5s)
-                 ├─ LiteLLM local Cache (SHA-256 keyed on model + messages)
-                 │    ├─ HIT  → skip provider, return cached answer
-                 │    └─ MISS → LiteLLM Router
-                 │         ├─ key_1  gemini/gemini-2.5-flash-lite   (primary)
-                 │         └─ key_2  groq/llama-3.1-8b-instant      (fallback on 429/5xx)
-                 └─ Atomic SQLite commit (upsert session + insert user + assistant)
-```
+### Key fallback
 
-**Key design decisions:**
-- One process, one worker, one Railway replica — the in-memory cache and lock registry are process-local by design
-- Cache identity: `SHA-256([1, model, messages])` — model and conversation context are both part of the key; a cache hit for session A cannot appear in session B
-- Simulation bypass: `X-Simulate-Failure` skips both cache read and write; the winning real provider is called; ContextVar ensures isolation between concurrent requests
-- No write transaction spans an LLM call — context read, inference, and commit are separate operations within the session lock
+LiteLLM Router is configured with two deployment groups: `primary` (Gemini `gemini/gemini-2.5-flash-lite`, `key_1`) and `fallback` (Groq `groq/qwen/qwen3-8b`, `key_2`). The Router's `fallbacks=[{"primary": ["fallback"]}]` setting triggers automatic failover on 429, 500, 502, 503, and timeout errors.
 
----
+For the `X-Simulate-Failure` test hook, the Router is bypassed entirely in favour of a manual attempt loop — this guarantees isolation (each request's simulated failures live in a `ContextVar`, invisible to other concurrent requests).
 
-## API
+### Caching
 
-Base URL: `https://<railway-url>`
+LiteLLM's built-in `Cache(type="local")` is used, but with an explicit SHA-256 cache key: `SHA256([1, model, messages])`. This key includes the full message list (system prompt + history + new message) so:
+- Two identical first messages in two different sessions share the same cache entry.
+- Any change in conversation history produces a cache miss.
+- The model name is part of the key so a Gemini response is never returned as a Groq response.
 
-### `GET /health`
+Simulated requests bypass cache reads and writes entirely — a cache hit would defeat the failover demonstration.
 
-```json
-{"status":"ok","keys_configured":2,"cache_enabled":true}
-```
+### SQLite session storage
 
-### `POST /chat`
+`aiosqlite` with WAL mode gives concurrent reads without blocking the async event loop. A per-session `asyncio.Lock` ensures that turns within the same session are serialised: history is read, the LLM is called, and the result is committed atomically, with no other turn for that session able to interleave.
 
-**Request:**
-```json
-{
-  "session_id": "s-7f3a",
-  "message": "What is the capital of France?",
-  "system_prompt": "Answer in one sentence."
-}
-```
-
-**Response (200):**
-```json
-{
-  "session_id": "s-7f3a",
-  "reply": "Paris is the capital of France.",
-  "metadata": {
-    "resolution_source": "LIVE_INFERENCE",
-    "model": "gemini/gemini-2.5-flash-lite",
-    "latency_ms": 412,
-    "input_tokens": 18,
-    "output_tokens": 9,
-    "key_id": "key_1",
-    "fallback_attempts": 0
-  }
-}
-```
-
-**Error responses:** `422` (validation), `503` (all providers unavailable), `404` (unknown session in GET)
-
-### `GET /sessions/{session_id}/messages`
-
-Returns full conversation history ordered oldest-first. User messages have no `metadata`. Assistant messages include all 7 metadata fields.
-
-### Failure simulation
-
-Enable with `ENABLE_FAILURE_SIMULATION=true` on the backend. Send:
-
-```
-X-Simulate-Failure: key_1=429
-```
-
-Allowed values: `key_1=429`, `key_2=500`, `*=503`, etc. Status codes: `429`, `500`, `502`, `503`.
+The `messages` table schema matches the assignment spec; `metadata` is stored as a JSON string on assistant rows.
 
 ---
 
-## Testing
+## 4. Verification: how to see failover, cache hits and per-message token usage
 
-### Backend (zero real API calls)
+Set `API=https://<your-railway-url>` for the commands below.
 
-```bash
-cd backend
-pip install -r requirements-dev.in
-pytest -v
-```
-
-### Frontend
+### Cache hit
 
 ```bash
-cd frontend
-npm install && npm test
-```
-
-### Cache verification
-
-```bash
-API=https://<railway-url>
-
-# First request — LIVE_INFERENCE
+# First call — LIVE_INFERENCE
 curl -s -X POST $API/chat -H "Content-Type: application/json" \
-  -d '{"session_id":"cache-demo","message":"What is 2+2?"}' | jq .metadata
+  -d '{"session_id":"demo-cache","message":"What is 2+2?"}' | jq .metadata.resolution_source
+# "LIVE_INFERENCE"
 
-# Same session, same message — LLM_CACHE (same usage counts, faster latency)
+# Same session, same first message — LLM_CACHE (faster latency, same token counts)
 curl -s -X POST $API/chat -H "Content-Type: application/json" \
-  -d '{"session_id":"cache-demo","message":"What is 2+2?"}' | jq .metadata
+  -d '{"session_id":"demo-cache","message":"What is 2+2?"}' | jq .metadata
+# resolution_source: "LLM_CACHE", key_id: null
 ```
 
-### Failover verification
+### Failover
 
 ```bash
-# Simulate primary failure — fallback_attempts=1, key_id=key_2
+# Primary key simulated as 429 → fallback key_2 answers
 curl -s -X POST $API/chat -H "Content-Type: application/json" \
   -H "X-Simulate-Failure: key_1=429" \
-  -d '{"session_id":"failover-demo","message":"Hello"}' | jq .metadata
+  -d '{"session_id":"demo-failover","message":"Hello"}' | jq '{key_id,fallback_attempts}' .metadata
+# key_id: "key_2", fallback_attempts: 1
 
-# Simulate all-providers failure — 503
+# All keys fail → 503
 curl -s -X POST $API/chat -H "Content-Type: application/json" \
   -H "X-Simulate-Failure: *=429" \
-  -d '{"session_id":"all-fail","message":"Hello"}' | jq .
+  -d '{"session_id":"demo-all-fail","message":"Hello"}'
+# 503 {"detail":"all providers unavailable"}
 ```
 
----
-
-## Deployment
-
-### Railway (backend)
-
-1. Connect GitHub repo → New Service → set Root Directory: `backend`
-2. Add Volume → mount path: `/data`
-3. Set environment variables:
-   ```
-   GEMINI_API_KEY=<your-key>
-   GROQ_API_KEY=<your-key>
-   DATABASE_URL=sqlite:////data/app.db
-   ENABLE_FAILURE_SIMULATION=true
-   ALLOWED_ORIGINS=https://<your-vercel-url>
-   ```
-4. Deploy and confirm `GET /health` returns 200
-
-> **Cost note:** Railway's free tier provides $1/month credit (insufficient for always-on). New users receive a one-time $5 credit. Render.com is a free-tier alternative; the same Dockerfile works unchanged.
-
-### Vercel (frontend)
-
-1. Import repo → Framework: Vite → Root Directory: `frontend`
-2. Set environment variable: `VITE_API_BASE_URL=https://<your-railway-url>`
-3. Deploy and confirm the app loads in an incognito window
-
-### Local Docker stack
+### Per-message token usage
 
 ```bash
-make up      # starts backend:8000 + frontend:3000
-make down    # stops and removes containers (volume data persists)
-make logs    # tail logs from both services
+curl -s -X POST $API/chat -H "Content-Type: application/json" \
+  -d '{"session_id":"demo-tokens","message":"Ping"}' | jq '.metadata | {input_tokens, output_tokens}'
+```
+
+Each reply in the UI also shows input and output tokens for that individual request.
+
+### Session history
+
+```bash
+curl -s $API/sessions/demo-cache/messages | jq .
 ```
 
 ---
 
-## Known Limitations
+## 5. Setup Used: your editor and AI tools
 
-- **In-memory cache** — cleared on every backend restart; a cold start returns `LIVE_INFERENCE` for previously cached queries
-- **SQLite** — single-writer; not suitable for horizontal scaling, but correct for the assignment's one-worker requirement
-- **Groq TPM ceiling** — Groq's free tier is limited to 6,000 TPM; at ~500 tokens/request the effective rate cap is ~12 req/min, lower than the 30 RPM headline
-- **Railway cost gate** — Railway's free plan ($1/month credit) is insufficient for persistent deployment; Render.com free tier is the documented fallback
+**Editor:** Cursor (VS Code fork)
+
+**AI tools used throughout:**
+- **Claude Code (Anthropic)** — primary coding assistant: architecture design, feature implementation, test generation, debugging, and code review
+- **Claude claude.ai** — referenced for API documentation and LiteLLM integration patterns
+- **LiteLLM docs** — official documentation for Router configuration and streaming
+
+No AI-generated code was accepted without review; all logic was verified against the assignment spec and tested.
+
+---
+
+## 6. Bonus features (if any): what you added beyond the requirements and why
+
+| Feature | Why |
+|---------|-----|
+| **Relay AI identity & guardrails** | Server-enforced system prompt gives the bot a consistent identity; output filter catches jailbreak-compliance attempts before they're cached or stored |
+| **Prompt-injection detection** | 37-pattern regex guard on all inputs rejects known injection attempts at the API boundary, before any LLM call |
+| **SSE streaming** | Tokens stream live to the browser via `POST /chat/stream`, eliminating the perceived wait for long replies |
+| **Markdown rendering** | `react-markdown` + `remark-gfm` renders headings, bold, code blocks, tables, and lists in assistant replies |
+| **Dark premium UI** | Full CSS-custom-property dark theme with animations, blinking streaming cursor, and metadata chip row per reply |
+| **Resilience Lab** | In-browser panel to inject `X-Simulate-Failure` headers and set a supplemental system prompt without curl |
+| **Security headers** | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cache-Control` on every response |
+| **Rate limiting** | `slowapi` in-process rate limiter (configurable via `CHAT_RATE_LIMIT`); returns `Retry-After: 60` on 429 |
+
+---
+
+## Known limitations
+
+- **In-memory cache** — cleared on every backend restart; cold start returns `LIVE_INFERENCE` for previously cached queries.
+- **SQLite single-writer** — WAL mode handles concurrent reads, but writes are serialised per session. Not suitable for horizontal scaling, which is intentional for the one-worker assignment.
+- **Groq TPM ceiling** — Groq's free tier is limited to 6,000 TPM; at ~500 tokens/request the effective rate cap is ~12 req/min.
