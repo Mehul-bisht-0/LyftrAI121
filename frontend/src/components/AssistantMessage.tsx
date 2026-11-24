@@ -1,4 +1,6 @@
 import { Zap, Radio, Clock, Layers, Key, GitBranch } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ReplyMetadata } from "../types";
 
 interface Props {
@@ -66,7 +68,7 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
       <div className="flex flex-col gap-2 min-w-0">
         {/* Reply bubble */}
         <div
-          className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm leading-relaxed whitespace-pre-wrap break-words border"
+          className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm leading-relaxed border"
           style={{
             background: "hsl(var(--surface))",
             borderColor: "hsl(var(--border))",
@@ -74,9 +76,17 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
             boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
           }}
         >
-          {content}
-          {streaming && (
-            <span className="animate-cursor inline-block ml-0.5" aria-hidden="true">▌</span>
+          {streaming ? (
+            /* Plain text while streaming to avoid partial-markdown glitches */
+            <span className="whitespace-pre-wrap break-words">
+              {content}
+              <span className="animate-cursor" aria-hidden="true">▌</span>
+            </span>
+          ) : (
+            /* Full markdown once the stream is done */
+            <div className="relay-prose">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            </div>
           )}
         </div>
 
