@@ -44,6 +44,7 @@ def build_router(specs: list[DeploymentSpec]):
         allowed_fails=1,
         num_retries=0,
         cache_responses=False,
+        timeout=30,
     )
 
 

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_HERE = Path(__file__).resolve().parent.parent  # backend/
 
 
 @dataclass(frozen=True)
@@ -15,7 +18,10 @@ class DeploymentSpec:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        # check backend/.env, then project root .env
+        env_file=(str(_HERE / ".env"), str(_HERE.parent / ".env")),
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     gemini_api_key: str
@@ -29,13 +35,13 @@ class Settings(BaseSettings):
         return [
             DeploymentSpec(
                 key_id="key_1",
-                model="gemini/gemini-2.5-flash-lite",
+                model="gemini/gemini-3.1-flash-lite",
                 routing_group="primary",
                 secret=self.gemini_api_key,
             ),
             DeploymentSpec(
                 key_id="key_2",
-                model="groq/llama-3.1-8b-instant",
+                model="groq/qwen/qwen3.8-27b",
                 routing_group="fallback",
                 secret=self.groq_api_key,
             ),
