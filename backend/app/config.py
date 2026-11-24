@@ -61,13 +61,13 @@ class Settings(BaseSettings):
         return [
             DeploymentSpec(
                 key_id="key_1",
-                model="gemini/gemini-2.5-flash-lite",
+                model="gemini/gemini-3.1-flash-lite",
                 routing_group="primary",
                 secret=gemini_key,
             ),
             DeploymentSpec(
                 key_id="key_2",
-                model="groq/qwen/qwen3-8b",
+                model="groq/qwen/qwen3.8-27b",
                 routing_group="fallback",
                 secret=groq_key,
             ),
