@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Sparkles, Code2, BookOpen } from "lucide-react";
+import { MessageSquare, Code2, Layers } from "lucide-react";
 import type { DisplayMessage } from "../types";
 import { AssistantMessage } from "./AssistantMessage";
 
@@ -11,7 +11,7 @@ interface Props {
 
 const SUGGESTIONS = [
   {
-    icon: Sparkles,
+    icon: MessageSquare,
     label: "Explain a concept",
     prompt: "Explain quantum entanglement in simple terms.",
   },
@@ -21,7 +21,7 @@ const SUGGESTIONS = [
     prompt: "Write a Python function to find duplicates in a list.",
   },
   {
-    icon: BookOpen,
+    icon: Layers,
     label: "Best practices",
     prompt: "What are the best practices for designing a REST API?",
   },
@@ -43,49 +43,81 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
 
         {/* ── Empty state ─────────────────────────────────── */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center pt-16 pb-8 select-none animate-fade-up">
-            {/* Logo */}
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl mb-5"
+          <div className="flex flex-col items-center pt-20 pb-8 select-none animate-fade-up">
+            {/* Wordmark */}
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="text-2xl font-bold tracking-tight"
+                style={{ color: "hsl(var(--text))", letterSpacing: "-0.03em" }}
+              >
+                RELAY
+              </span>
+              <span
+                className="text-sm font-semibold px-1.5 py-0.5 rounded self-center"
+                style={{
+                  background: "hsl(var(--accent-bg))",
+                  color: "hsl(var(--accent))",
+                  border: "1px solid hsl(var(--accent) / 0.25)",
+                }}
+              >
+                AI
+              </span>
+            </div>
+
+            <h2
+              className="text-base font-medium mb-1"
+              style={{ color: "hsl(var(--text-muted))" }}
+            >
+              Signal ready.
+            </h2>
+
+            {/* Signal track — the one motion moment */}
+            <div className="signal-track my-5">
+              <div className="signal-pulse" />
+            </div>
+
+            <p
+              className="text-xs mb-8 font-mono text-center"
               style={{
-                background: "linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(239 90% 55%) 100%)",
-                boxShadow: "0 0 32px hsl(var(--accent) / 0.3), 0 0 64px hsl(var(--accent) / 0.1)",
+                color: "hsl(var(--text-dim))",
+                fontFamily: "'JetBrains Mono', monospace",
+                letterSpacing: "0.01em",
               }}
             >
-              R
-            </div>
-            <h2
-              className="text-xl font-semibold mb-1"
-              style={{ color: "hsl(var(--text))" }}
-            >
-              How can I help you?
-            </h2>
-            <p className="text-sm mb-8" style={{ color: "hsl(var(--text-muted))" }}>
-              Fault-tolerant · Guardrails enforced · LiteLLM routing
+              Fault-tolerant routing · Guardrails enforced · Gemini + Groq
             </p>
 
-            {/* Suggestion chips */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-xl">
+            {/* Suggestion tiles */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full max-w-lg">
               {SUGGESTIONS.map(({ icon: Icon, label, prompt }) => (
                 <button
                   key={label}
                   onClick={() => onSuggest(prompt)}
-                  className="group flex flex-col items-start gap-2 px-4 py-3 rounded-xl border text-left transition-all duration-200 hover:scale-[1.02]"
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border text-left transition-colors duration-150"
                   style={{
                     background: "hsl(var(--surface))",
-                    borderColor: "hsl(var(--border))",
+                    borderColor: "hsl(var(--border-dim))",
+                    borderLeftWidth: "2px",
+                    borderLeftColor: "hsl(var(--border-dim))",
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "hsl(var(--accent) / 0.5)";
-                    (e.currentTarget as HTMLButtonElement).style.background = "hsl(var(--elevated))";
+                    const el = e.currentTarget as HTMLButtonElement;
+                    el.style.borderColor = "hsl(var(--border))";
+                    el.style.borderLeftColor = "hsl(var(--accent))";
+                    el.style.background = "hsl(var(--elevated))";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "hsl(var(--border))";
-                    (e.currentTarget as HTMLButtonElement).style.background = "hsl(var(--surface))";
+                    const el = e.currentTarget as HTMLButtonElement;
+                    el.style.borderColor = "hsl(var(--border-dim))";
+                    el.style.borderLeftColor = "hsl(var(--border-dim))";
+                    el.style.background = "hsl(var(--surface))";
                   }}
                 >
-                  <Icon size={16} style={{ color: "hsl(var(--accent))" }} />
-                  <span className="text-xs font-medium" style={{ color: "hsl(var(--text-muted))" }}>
+                  <Icon size={13} style={{ color: "hsl(var(--accent))", flexShrink: 0 }} strokeWidth={2} />
+                  <span
+                    className="text-xs font-medium leading-tight"
+                    style={{ color: "hsl(var(--text-muted))" }}
+                  >
                     {label}
                   </span>
                 </button>
@@ -99,22 +131,23 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
           <div
             key={msg.id}
             className={`flex animate-fade-up ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            style={{ animationDelay: `${i * 20}ms` }}
+            style={{ animationDelay: `${i * 15}ms` }}
           >
             {/* User bubble */}
             {msg.role === "user" && (
               <div
-                className="max-w-[75%] px-4 py-3 rounded-2xl rounded-tr-sm text-sm leading-relaxed whitespace-pre-wrap break-words text-white"
+                className="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed whitespace-pre-wrap break-words"
                 style={{
-                  background: "linear-gradient(135deg, hsl(239 70% 50%) 0%, hsl(265 60% 45%) 100%)",
-                  boxShadow: "0 2px 12px hsl(var(--accent) / 0.3)",
+                  background: "hsl(var(--accent) / 0.14)",
+                  border: "1px solid hsl(var(--accent) / 0.3)",
+                  color: "hsl(var(--text))",
                 }}
               >
                 {msg.content}
               </div>
             )}
 
-            {/* Assistant message (shown while streaming or once complete) */}
+            {/* Assistant message */}
             {msg.role === "assistant" && (msg.streaming || msg.metadata) && (
               <AssistantMessage
                 content={msg.content}
@@ -126,10 +159,10 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
             {/* Error message */}
             {msg.role === "error" && (
               <div
-                className="max-w-[75%] px-4 py-3 rounded-2xl rounded-tl-sm text-sm leading-relaxed border"
+                className="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm leading-relaxed border"
                 style={{
-                  background: "hsl(var(--error) / 0.08)",
-                  borderColor: "hsl(var(--error) / 0.25)",
+                  background: "hsl(var(--error) / 0.06)",
+                  borderColor: "hsl(var(--error) / 0.2)",
                   color: "hsl(var(--error))",
                 }}
               >
@@ -140,21 +173,25 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
           </div>
         ))}
 
-        {/* ── Typing indicator (hidden while a streaming message is live) ── */}
+        {/* ── Typing indicator ────────────────────────────── */}
         {pending && !messages.some((m) => m.streaming) && (
           <div className="flex justify-start animate-fade-up">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {/* Avatar */}
               <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0 self-end mb-1"
+                className="w-5 h-5 rounded-sm flex items-center justify-center text-xs shrink-0 self-end mb-1 font-mono"
                 style={{
-                  background: "linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(239 90% 55%) 100%)",
+                  background: "hsl(var(--accent-bg))",
+                  border: "1px solid hsl(var(--accent) / 0.3)",
+                  color: "hsl(var(--accent))",
+                  fontFamily: "monospace",
+                  fontSize: "10px",
                 }}
               >
                 R
               </div>
               <div
-                className="flex items-center gap-1 px-4 py-3 rounded-2xl rounded-tl-sm border"
+                className="flex items-center gap-1 px-3.5 py-2.5 rounded-2xl rounded-tl-sm border"
                 style={{
                   background: "hsl(var(--surface))",
                   borderColor: "hsl(var(--border))",
@@ -162,15 +199,15 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
               >
                 <span
                   className="w-1.5 h-1.5 rounded-full animate-dot-1"
-                  style={{ background: "hsl(var(--text-muted))" }}
+                  style={{ background: "hsl(var(--text-dim))" }}
                 />
                 <span
                   className="w-1.5 h-1.5 rounded-full animate-dot-2"
-                  style={{ background: "hsl(var(--text-muted))" }}
+                  style={{ background: "hsl(var(--text-dim))" }}
                 />
                 <span
                   className="w-1.5 h-1.5 rounded-full animate-dot-3"
-                  style={{ background: "hsl(var(--text-muted))" }}
+                  style={{ background: "hsl(var(--text-dim))" }}
                 />
               </div>
             </div>

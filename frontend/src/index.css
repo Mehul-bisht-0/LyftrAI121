@@ -4,23 +4,23 @@
 
 @layer base {
   :root {
-    /* ── Dark premium palette ───────────────────────────────── */
-    --bg:           220 16% 4%;
-    --surface:      220 14% 7%;
-    --elevated:     220 12% 10%;
-    --hover:        220 11% 13%;
-    --border-dim:   220 10% 13%;
-    --border:       220  9% 18%;
-    --border-hi:    220  8% 24%;
-    --text:         220 14% 93%;
-    --text-muted:   220  7% 58%;
-    --text-dim:     220  5% 38%;
-    --accent:       239 84% 67%;       /* indigo-500  */
-    --accent-hi:    239 95% 76%;       /* indigo-400  */
-    --accent-bg:    239 60% 16%;       /* indigo dark */
-    --success:      160 55% 52%;
-    --warn:          38 90% 58%;
-    --error:          0 72% 65%;
+    /* ── Signal/relay palette — deep navy · teal-cyan accent ── */
+    --bg:           205 25% 4%;
+    --surface:      205 22% 7%;
+    --elevated:     205 18% 10%;
+    --hover:        205 15% 13%;
+    --border-dim:   205 16% 11%;
+    --border:       205 13% 17%;
+    --border-hi:    205 12% 24%;
+    --text:         195 20% 92%;
+    --text-muted:   195 14% 55%;
+    --text-dim:     195 10% 32%;
+    --accent:       177 100% 42%;   /* teal-cyan  #00D6CB */
+    --accent-hi:    177  85% 65%;   /* lighter     #5AEEEA */
+    --accent-bg:    177  70%  7%;   /* dark teal bg */
+    --success:      150  55% 50%;
+    --warn:          38  90% 55%;
+    --error:          0  72% 63%;
 
     /* legacy compat (shadcn, ui/ components) */
     --background:         var(--bg);
@@ -33,7 +33,7 @@
     --input:              var(--elevated);
     --primary:            var(--accent);
     --primary-foreground: 0 0% 100%;
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 
   * { border-color: hsl(var(--border)); box-sizing: border-box; }
@@ -47,13 +47,14 @@
   body {
     background-color: hsl(var(--bg));
     color: hsl(var(--text));
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    line-height: 1.65;
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "ss01", "ss02";
+    line-height: 1.6;
+    letter-spacing: -0.01em;
   }
 
-  /* ── Custom scrollbar ────────────────────────────────────── */
-  ::-webkit-scrollbar       { width: 4px; height: 4px; }
+  /* ── Thin scrollbar ──────────────────────────────────────── */
+  ::-webkit-scrollbar       { width: 3px; height: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--border-hi));
@@ -64,18 +65,18 @@
 
 /* ── Animations ──────────────────────────────────────────── */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
 
 @keyframes dot-bounce {
   0%, 80%, 100% { transform: translateY(0);    opacity: 0.3; }
-  40%           { transform: translateY(-4px); opacity: 1;   }
+  40%           { transform: translateY(-3px); opacity: 1;   }
 }
 
 @keyframes pulse-ring {
   0%   { box-shadow: 0 0 0 0   hsl(var(--accent) / 0.4); }
-  70%  { box-shadow: 0 0 0 6px hsl(var(--accent) / 0);   }
+  70%  { box-shadow: 0 0 0 5px hsl(var(--accent) / 0);   }
   100% { box-shadow: 0 0 0 0   hsl(var(--accent) / 0);   }
 }
 
@@ -84,8 +85,16 @@
   50%       { opacity: 0; }
 }
 
+/* Signal sweep — the one deliberate motion in the empty state */
+@keyframes signal-sweep {
+  0%   { transform: translateX(-64px); opacity: 0; }
+  8%   { opacity: 1; }
+  82%  { opacity: 0.9; }
+  100% { transform: translateX(260px); opacity: 0; }
+}
+
 @layer utilities {
-  .animate-fade-up  { animation: fadeUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-fade-up  { animation: fadeUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .animate-dot-1    { animation: dot-bounce 1.2s ease-in-out 0s   infinite; }
   .animate-dot-2    { animation: dot-bounce 1.2s ease-in-out 0.2s infinite; }
   .animate-dot-3    { animation: dot-bounce 1.2s ease-in-out 0.4s infinite; }
@@ -93,12 +102,51 @@
   .animate-cursor   { animation: cursor-blink 0.9s ease-in-out infinite; color: hsl(var(--accent)); }
 }
 
-/* ── Markdown prose (assistant messages) ───────────────────── */
+/* ── Signal track ──────────────────────────────────────────── */
+.signal-track {
+  position: relative;
+  width: 196px;
+  height: 5px;
+  overflow: hidden;
+}
+
+.signal-track::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%; transform: translateY(-50%);
+  height: 1px;
+  background: hsl(var(--border-hi));
+}
+
+.signal-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 5px;
+  background: linear-gradient(to right,
+    transparent,
+    hsl(var(--accent) / 0.5),
+    hsl(var(--accent)),
+    hsl(var(--accent) / 0.5),
+    transparent
+  );
+  border-radius: 999px;
+  animation: signal-sweep 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signal-pulse { animation: none; opacity: 0.4; left: 50%; transform: translateX(-50%); }
+  .animate-fade-up { animation: none; opacity: 1; }
+}
+
+/* ── Markdown prose ──────────────────────────────────────── */
 .relay-prose {
   overflow-wrap: break-word;
   word-break: break-word;
 }
-.relay-prose > * + * { margin-top: 0.65em; }
+.relay-prose > * + * { margin-top: 0.6em; }
 .relay-prose > *:first-child { margin-top: 0; }
 
 .relay-prose h1,
@@ -110,8 +158,8 @@
   color: hsl(var(--text));
   margin-top: 1.1em;
 }
-.relay-prose h1 { font-size: 1.2rem; }
-.relay-prose h2 { font-size: 1.08rem; }
+.relay-prose h1 { font-size: 1.15rem; }
+.relay-prose h2 { font-size: 1.05rem; }
 .relay-prose h3 { font-size: 1rem; }
 .relay-prose h4 { font-size: 0.95rem; }
 
@@ -119,11 +167,11 @@
 .relay-prose em     { font-style: italic; }
 
 .relay-prose code {
-  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   font-size: 0.82em;
   background: hsl(var(--elevated));
   border: 1px solid hsl(var(--border));
-  border-radius: 4px;
+  border-radius: 3px;
   padding: 0.1em 0.4em;
   color: hsl(var(--accent-hi));
 }
@@ -131,8 +179,8 @@
 .relay-prose pre {
   background: hsl(var(--elevated));
   border: 1px solid hsl(var(--border));
-  border-radius: 8px;
-  padding: 0.9em 1em;
+  border-radius: 6px;
+  padding: 0.85em 1em;
   overflow-x: auto;
   margin-top: 0.75em;
 }
@@ -156,7 +204,7 @@
 .relay-prose a:hover { opacity: 0.85; }
 
 .relay-prose blockquote {
-  border-left: 3px solid hsl(var(--border-hi));
+  border-left: 2px solid hsl(var(--accent) / 0.3);
   padding-left: 0.9em;
   color: hsl(var(--text-muted));
   font-style: italic;

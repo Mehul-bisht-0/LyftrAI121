@@ -118,48 +118,58 @@ export default function App() {
         style={{
           background: "hsl(var(--surface))",
           borderColor: "hsl(var(--border-dim))",
-          backdropFilter: "blur(12px)",
         }}
       >
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm select-none shrink-0"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(239 90% 55%) 100%)",
-              boxShadow: "0 0 12px hsl(var(--accent) / 0.4)",
-            }}
+        {/* Brand wordmark */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2 leading-none">
+            <span
+              className="text-sm font-bold tracking-tight select-none"
+              style={{ color: "hsl(var(--text))", letterSpacing: "-0.02em" }}
+            >
+              RELAY
+            </span>
+            <span
+              className="text-xs font-semibold px-1.5 py-0.5 rounded select-none"
+              style={{
+                background: "hsl(var(--accent-bg))",
+                color: "hsl(var(--accent))",
+                border: "1px solid hsl(var(--accent) / 0.25)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              AI
+            </span>
+          </div>
+          <span
+            className="text-xs font-mono select-none"
+            style={{ color: "hsl(var(--text-dim))", fontFamily: "'JetBrains Mono', monospace" }}
           >
-            R
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold leading-none" style={{ color: "hsl(var(--text))" }}>
-              Relay AI
-            </h1>
-            <p className="text-xs mt-0.5" style={{ color: "hsl(var(--text-dim))" }}>
-              {SESSION_ID.slice(0, 8)}…
-            </p>
-          </div>
+            #{SESSION_ID.slice(0, 8)}
+          </span>
         </div>
 
         {/* Right badges */}
         <div className="flex items-center gap-2">
           <span
-            className="hidden sm:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded border"
             style={{
               color: "hsl(var(--success))",
-              borderColor: "hsl(var(--success) / 0.25)",
-              background: "hsl(var(--success) / 0.08)",
+              borderColor: "hsl(var(--success) / 0.2)",
+              background: "hsl(var(--success) / 0.06)",
             }}
           >
-            <Shield size={11} strokeWidth={2.5} />
+            <Shield size={10} strokeWidth={2.5} />
             Guardrails active
           </span>
           <span
-            className="hidden md:block text-xs px-2 py-0.5 rounded"
+            className="hidden md:block text-xs px-2 py-1 rounded border font-mono"
             style={{
               color: "hsl(var(--text-dim))",
               background: "hsl(var(--elevated))",
+              borderColor: "hsl(var(--border-dim))",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "11px",
             }}
           >
             Gemini + Groq

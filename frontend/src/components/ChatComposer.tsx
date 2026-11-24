@@ -12,7 +12,6 @@ export function ChatComposer({ onSend, disabled }: Props) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  /* Auto-resize textarea */
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -52,14 +51,14 @@ export function ChatComposer({ onSend, disabled }: Props) {
     >
       <div className="max-w-3xl mx-auto">
         <div
-          className="flex items-end gap-3 rounded-2xl border px-4 py-3 transition-all duration-200"
+          className="flex items-end gap-3 rounded-xl border px-4 py-2.5 transition-all duration-150"
           style={{
             background: "hsl(var(--elevated))",
             borderColor: "hsl(var(--border))",
           }}
           onFocusCapture={(e) => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(var(--accent) / 0.5)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px hsl(var(--accent) / 0.1)";
+            (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(var(--accent) / 0.4)";
+            (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 3px hsl(var(--accent) / 0.07)";
           }}
           onBlurCapture={(e) => {
             (e.currentTarget as HTMLDivElement).style.borderColor = "hsl(var(--border))";
@@ -76,20 +75,24 @@ export function ChatComposer({ onSend, disabled }: Props) {
             disabled={disabled}
             rows={1}
             maxLength={MAX_CHARS}
-            className="flex-1 resize-none bg-transparent outline-none text-sm leading-relaxed placeholder:text-sm"
+            className="flex-1 resize-none bg-transparent outline-none text-sm leading-relaxed"
             style={{
               color: "hsl(var(--text))",
               minHeight: "24px",
               maxHeight: "160px",
+              fontFamily: "inherit",
             }}
           />
 
-          {/* Right side: char counter + send button */}
           <div className="flex items-center gap-2 shrink-0 self-end">
             {nearLimit && (
               <span
-                className="text-xs tabular-nums"
-                style={{ color: remaining < 100 ? "hsl(var(--error))" : "hsl(var(--text-dim))" }}
+                className="text-xs tabular-nums font-mono"
+                style={{
+                  color: remaining < 100 ? "hsl(var(--error))" : "hsl(var(--text-dim))",
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "10px",
+                }}
               >
                 {remaining}
               </span>
@@ -99,13 +102,13 @@ export function ChatComposer({ onSend, disabled }: Props) {
               disabled={!canSend}
               aria-label="Send"
               data-testid="send-button"
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 shrink-0"
+              className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 shrink-0"
               style={
                 canSend
                   ? {
                       background: "hsl(var(--accent))",
-                      color: "white",
-                      boxShadow: "0 0 12px hsl(var(--accent) / 0.4)",
+                      color: "hsl(var(--bg))",
+                      boxShadow: "0 0 10px hsl(var(--accent) / 0.3)",
                     }
                   : {
                       background: "hsl(var(--border))",
@@ -113,15 +116,20 @@ export function ChatComposer({ onSend, disabled }: Props) {
                     }
               }
             >
-              <ArrowUp size={16} strokeWidth={2.5} />
+              <ArrowUp size={14} strokeWidth={2.5} />
             </button>
           </div>
         </div>
 
-        {/* Keyboard hint */}
-        <p className="text-center text-xs mt-2" style={{ color: "hsl(var(--text-dim))" }}>
-          <kbd className="font-mono">Enter</kbd> to send ·{" "}
-          <kbd className="font-mono">Shift+Enter</kbd> for newline
+        <p
+          className="text-center mt-2"
+          style={{
+            color: "hsl(var(--text-dim))",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "10px",
+          }}
+        >
+          Enter to send · Shift+Enter for newline
         </p>
       </div>
     </div>
