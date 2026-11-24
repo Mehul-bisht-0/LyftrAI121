@@ -3,7 +3,8 @@ import type { ReplyMetadata } from "../types";
 
 interface Props {
   content: string;
-  metadata: ReplyMetadata;
+  metadata?: ReplyMetadata;
+  streaming?: boolean;
 }
 
 function MetaChip({
@@ -41,10 +42,10 @@ function MetaChip({
   );
 }
 
-export function AssistantMessage({ content, metadata }: Props) {
-  const isCache = metadata.resolution_source === "LLM_CACHE";
-  const modelShort = metadata.model.split("/").pop() ?? metadata.model;
-  const hasFallback = metadata.fallback_attempts > 0;
+export function AssistantMessage({ content, metadata, streaming }: Props) {
+  const isCache = metadata?.resolution_source === "LLM_CACHE";
+  const modelShort = metadata ? (metadata.model.split("/").pop() ?? metadata.model) : "";
+  const hasFallback = (metadata?.fallback_attempts ?? 0) > 0;
 
   return (
     <div
@@ -74,51 +75,56 @@ export function AssistantMessage({ content, metadata }: Props) {
           }}
         >
           {content}
+          {streaming && (
+            <span className="animate-cursor inline-block ml-0.5" aria-hidden="true">▌</span>
+          )}
         </div>
 
-        {/* Metadata chips row */}
-        <div className="flex flex-wrap gap-1.5 pl-0.5">
-          {/* Source — most prominent */}
-          <span
-            data-testid="metadata-source"
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border"
-            style={
-              isCache
-                ? {
-                    color: "hsl(var(--success))",
-                    borderColor: "hsl(var(--success) / 0.25)",
-                    background: "hsl(var(--success) / 0.1)",
-                  }
-                : {
-                    color: "hsl(var(--accent-hi))",
-                    borderColor: "hsl(var(--accent) / 0.25)",
-                    background: "hsl(var(--accent-bg))",
-                  }
-            }
-          >
-            {isCache ? <Zap size={10} strokeWidth={2.5} /> : <Radio size={10} strokeWidth={2.5} />}
-            {isCache ? "cache" : "live"}
-          </span>
+        {/* Metadata chips row — only when response is complete */}
+        {metadata && !streaming && (
+          <div className="flex flex-wrap gap-1.5 pl-0.5">
+            {/* Source — most prominent */}
+            <span
+              data-testid="metadata-source"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border"
+              style={
+                isCache
+                  ? {
+                      color: "hsl(var(--success))",
+                      borderColor: "hsl(var(--success) / 0.25)",
+                      background: "hsl(var(--success) / 0.1)",
+                    }
+                  : {
+                      color: "hsl(var(--accent-hi))",
+                      borderColor: "hsl(var(--accent) / 0.25)",
+                      background: "hsl(var(--accent-bg))",
+                    }
+              }
+            >
+              {isCache ? <Zap size={10} strokeWidth={2.5} /> : <Radio size={10} strokeWidth={2.5} />}
+              {isCache ? "cache" : "live"}
+            </span>
 
-          <MetaChip icon={Layers}  value={modelShort}                    testId="metadata-model"    />
-          <MetaChip icon={Clock}   value={`${metadata.latency_ms}ms`}    testId="metadata-latency"  />
-          <MetaChip
-            icon={Layers}
-            value={`${metadata.input_tokens}↑ ${metadata.output_tokens}↓`}
-            testId="metadata-tokens"
-          />
-          <MetaChip
-            icon={Key}
-            value={metadata.key_id ?? "cache"}
-            testId="metadata-key"
-          />
-          <MetaChip
-            icon={GitBranch}
-            value={hasFallback ? `${metadata.fallback_attempts} fallback` : "primary"}
-            accent={hasFallback}
-            testId="metadata-fallback"
-          />
-        </div>
+            <MetaChip icon={Layers}  value={modelShort}                       testId="metadata-model"    />
+            <MetaChip icon={Clock}   value={`${metadata.latency_ms}ms`}       testId="metadata-latency"  />
+            <MetaChip
+              icon={Layers}
+              value={`${metadata.input_tokens}↑ ${metadata.output_tokens}↓`}
+              testId="metadata-tokens"
+            />
+            <MetaChip
+              icon={Key}
+              value={metadata.key_id ?? "cache"}
+              testId="metadata-key"
+            />
+            <MetaChip
+              icon={GitBranch}
+              value={hasFallback ? `${metadata.fallback_attempts} fallback` : "primary"}
+              accent={hasFallback}
+              testId="metadata-fallback"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

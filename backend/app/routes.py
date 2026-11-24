@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import time
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app import storage
 from app.contracts import (
@@ -98,6 +99,51 @@ async def chat(
             status_code=500,
             content={"detail": "internal server error"},
         )
+
+
+_SSE_HEADERS = {
+    "Cache-Control": "no-cache",
+    "X-Accel-Buffering": "no",
+    "Connection": "keep-alive",
+}
+
+
+@router.post("/chat/stream")
+@limiter.limit(_chat_rate_limit)
+async def chat_stream(
+    body: ChatRequest,
+    request: Request,
+):
+    started_at = time.monotonic()
+    settings = request.app.state.settings
+    service = request.app.state.chat_service
+
+    sanitized_message = sanitize_input(body.message)
+    sanitized_prompt = sanitize_input(body.system_prompt) if body.system_prompt else None
+
+    if settings.enable_injection_detection:
+        if detect_injection(sanitized_message) or (
+            sanitized_prompt and detect_injection(sanitized_prompt)
+        ):
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Message rejected: potentially unsafe content detected."},
+            )
+
+    body = body.model_copy(update={
+        "message": sanitized_message,
+        "system_prompt": sanitized_prompt,
+    })
+
+    async def event_stream():
+        async for event in service.stream_send(body, started_at):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )
 
 
 @router.get(

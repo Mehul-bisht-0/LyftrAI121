@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Shield } from "lucide-react";
-import { postChat } from "./api";
+import { postChat, streamChat } from "./api";
 import type { DisplayMessage, ReplyMetadata } from "./types";
 import { ApiError } from "./types";
 import { MessageList } from "./components/MessageList";
@@ -29,29 +29,79 @@ export default function App() {
     setMessages((prev) => [...prev, userMsg]);
     setPending(true);
 
-    try {
-      const resp = await postChat(
-        {
-          session_id: SESSION_ID,
-          message: text,
-          ...(resilience.systemPrompt ? { system_prompt: resilience.systemPrompt } : {}),
-        },
-        { simulationHeader: resilience.simulationHeader || undefined }
-      );
+    const reqBody = {
+      session_id: SESSION_ID,
+      message: text,
+      ...(resilience.systemPrompt ? { system_prompt: resilience.systemPrompt } : {}),
+    };
 
-      const assistantMsg: DisplayMessage = {
-        id: nextId(),
-        role: "assistant",
-        content: resp.reply,
-        metadata: resp.metadata,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+    // Simulation path: use non-streaming endpoint (simulation + streaming not combined)
+    if (resilience.simulationHeader) {
+      try {
+        const resp = await postChat(reqBody, {
+          simulationHeader: resilience.simulationHeader,
+        });
+        setMessages((prev) => [
+          ...prev,
+          { id: nextId(), role: "assistant", content: resp.reply, metadata: resp.metadata },
+        ]);
+      } catch (err) {
+        const detail =
+          err instanceof ApiError ? err.message
+          : err instanceof Error  ? err.message
+          : "Unknown error";
+        setMessages((prev) => [...prev, { id: nextId(), role: "error", content: detail }]);
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+
+    // Normal path: streaming
+    const streamId = nextId();
+    setMessages((prev) => [
+      ...prev,
+      { id: streamId, role: "assistant", content: "", streaming: true },
+    ]);
+
+    try {
+      let content = "";
+      for await (const event of streamChat(reqBody)) {
+        if (event.t === "delta") {
+          content += event.c;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamId ? { ...m, content } : m))
+          );
+        } else if (event.t === "override") {
+          content = event.c;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === streamId ? { ...m, content } : m))
+          );
+        } else if (event.t === "done") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamId
+                ? { ...m, metadata: event.m as ReplyMetadata, streaming: false }
+                : m
+            )
+          );
+        } else if (event.t === "error") {
+          throw new ApiError(0, (event as { t: "error"; d: string }).d);
+        }
+      }
+      // Ensure streaming flag removed if stream ended without a done event
+      setMessages((prev) =>
+        prev.map((m) => (m.id === streamId ? { ...m, streaming: false } : m))
+      );
     } catch (err) {
       const detail =
         err instanceof ApiError ? err.message
         : err instanceof Error  ? err.message
         : "Unknown error";
-      setMessages((prev) => [...prev, { id: nextId(), role: "error", content: detail }]);
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== streamId),
+        { id: nextId(), role: "error", content: detail },
+      ]);
     } finally {
       setPending(false);
     }

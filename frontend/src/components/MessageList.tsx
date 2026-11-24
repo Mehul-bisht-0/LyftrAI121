@@ -114,9 +114,13 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
               </div>
             )}
 
-            {/* Assistant message */}
-            {msg.role === "assistant" && msg.metadata && (
-              <AssistantMessage content={msg.content} metadata={msg.metadata} />
+            {/* Assistant message (shown while streaming or once complete) */}
+            {msg.role === "assistant" && (msg.streaming || msg.metadata) && (
+              <AssistantMessage
+                content={msg.content}
+                metadata={msg.metadata}
+                streaming={msg.streaming}
+              />
             )}
 
             {/* Error message */}
@@ -136,8 +140,8 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
           </div>
         ))}
 
-        {/* ── Typing indicator ────────────────────────────── */}
-        {pending && (
+        {/* ── Typing indicator (hidden while a streaming message is live) ── */}
+        {pending && !messages.some((m) => m.streaming) && (
           <div className="flex justify-start animate-fade-up">
             <div className="flex items-center gap-1.5">
               {/* Avatar */}

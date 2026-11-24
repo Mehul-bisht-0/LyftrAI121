@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import AsyncGenerator, Optional, Union
 
 import litellm
 
@@ -110,6 +110,62 @@ async def _normal_complete(
         output_tokens=output_tokens,
         cache_hit=False,
         fallback_attempts=fallback_attempts,
+    )
+
+
+async def stream_complete(
+    router,
+    specs: list[DeploymentSpec],
+    messages: list[dict],
+) -> AsyncGenerator[Union[str, ResolvedAnswer], None]:
+    """
+    Async generator for the normal (non-simulation) streaming path.
+    Yields str deltas as they arrive, then one final ResolvedAnswer.
+    """
+    try:
+        response = await router.acompletion(
+            model="primary",
+            messages=messages,
+            stream=True,
+            cache={"no-cache": True, "no-store": True},
+        )
+    except Exception as exc:
+        raise AllProvidersUnavailableError(str(exc)) from exc
+
+    full_content = ""
+    model_used: Optional[str] = None
+    input_tokens = 0
+    output_tokens = 0
+
+    async for chunk in response:
+        if not chunk.choices:
+            if hasattr(chunk, "usage") and chunk.usage:
+                input_tokens = getattr(chunk.usage, "prompt_tokens", 0) or 0
+                output_tokens = getattr(chunk.usage, "completion_tokens", 0) or 0
+            continue
+
+        delta = getattr(chunk.choices[0].delta, "content", "") or ""
+        if delta:
+            full_content += delta
+            yield delta
+
+        if model_used is None:
+            model_used = getattr(chunk, "model", None) or None
+
+        if hasattr(chunk, "usage") and chunk.usage:
+            input_tokens = getattr(chunk.usage, "prompt_tokens", 0) or 0
+            output_tokens = getattr(chunk.usage, "completion_tokens", 0) or 0
+
+    actual_model = model_used or specs[0].model
+    spec_index = _model_to_spec_index(actual_model, specs)
+    yield ResolvedAnswer(
+        content=full_content,
+        model=actual_model,
+        key_id=specs[spec_index].key_id,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cache_hit=False,
+        fallback_attempts=spec_index,
     )
 
 

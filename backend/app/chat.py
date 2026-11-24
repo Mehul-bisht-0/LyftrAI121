@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 from app import sessions, storage
 from app.config import Settings
@@ -138,3 +138,114 @@ class ChatService:
             reply=answer.content,
             metadata=ReplyMetadata(**metadata_dict),
         )
+
+    async def stream_send(
+        self,
+        req: ChatRequest,
+        started_at: float,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        Async generator for the /chat/stream endpoint.
+        Yields SSE event dicts: {t:"delta",c:str}, {t:"override",c:str},
+        {t:"done",m:metadata}, or {t:"error",d:str}.
+        Simulation path is not supported — use /chat with X-Simulate-Failure.
+        """
+        specs = self.settings.deployment_specs
+        primary_model = specs[0].model
+
+        async with sessions.hold(req.session_id):
+            history, stored_prompt = await storage.read_context(
+                self.settings.db_path, req.session_id
+            )
+            effective_prompt = (
+                req.system_prompt if req.system_prompt is not None else stored_prompt
+            )
+            messages = build_messages(effective_prompt, history, req.message)
+
+            # Cache hit — deliver full content in one delta, then done
+            cached = await llm_cache.find_answer(self.cache, primary_model, messages)
+            if cached is not None:
+                safe_content = safe_response(cached.content)
+                yield {"t": "delta", "c": safe_content}
+
+                latency_ms = int((time.monotonic() - started_at) * 1000)
+                metadata_dict = {
+                    "resolution_source": ResolutionSource.LLM_CACHE.value,
+                    "model": cached.model,
+                    "latency_ms": latency_ms,
+                    "input_tokens": cached.input_tokens,
+                    "output_tokens": cached.output_tokens,
+                    "key_id": None,
+                    "fallback_attempts": 0,
+                }
+                await storage.commit_turn(
+                    self.settings.db_path,
+                    req.session_id,
+                    effective_prompt,
+                    req.message,
+                    safe_content,
+                    metadata_dict,
+                )
+                yield {"t": "done", "m": metadata_dict}
+                return
+
+            # Live streaming
+            full_content = ""
+            answer: ResolvedAnswer | None = None
+
+            try:
+                async for event in llm_routing.stream_complete(
+                    self.router, specs, messages
+                ):
+                    if isinstance(event, str):
+                        full_content += event
+                        yield {"t": "delta", "c": event}
+                    else:
+                        answer = event
+            except AllProvidersUnavailableError:
+                yield {"t": "error", "d": "all providers unavailable"}
+                return
+            except Exception:
+                yield {"t": "error", "d": "internal server error"}
+                return
+
+            if answer is None:
+                yield {"t": "error", "d": "no response from provider"}
+                return
+
+            # Apply output guardrails — if jailbreak compliance detected, override
+            safe_content = safe_response(full_content)
+            if safe_content != full_content:
+                yield {"t": "override", "c": safe_content}
+                full_content = safe_content
+
+            await llm_cache.store_answer(
+                self.cache,
+                answer.model,
+                messages,
+                CachedAnswer(
+                    content=full_content,
+                    model=answer.model,
+                    input_tokens=answer.input_tokens,
+                    output_tokens=answer.output_tokens,
+                ),
+            )
+            latency_ms = int((time.monotonic() - started_at) * 1000)
+            metadata_dict = {
+                "resolution_source": ResolutionSource.LIVE_INFERENCE.value,
+                "model": answer.model,
+                "latency_ms": latency_ms,
+                "input_tokens": answer.input_tokens,
+                "output_tokens": answer.output_tokens,
+                "key_id": answer.key_id,
+                "fallback_attempts": answer.fallback_attempts,
+            }
+            await storage.commit_turn(
+                self.settings.db_path,
+                req.session_id,
+                effective_prompt,
+                req.message,
+                full_content,
+                metadata_dict,
+            )
+            yield {"t": "done", "m": metadata_dict}

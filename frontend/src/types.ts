@@ -37,7 +37,15 @@ export interface DisplayMessage {
   role: "user" | "assistant" | "error";
   content: string;
   metadata?: ReplyMetadata;
+  streaming?: boolean;
 }
+
+/** SSE event types from /chat/stream */
+export type StreamEvent =
+  | { t: "delta";    c: string }
+  | { t: "override"; c: string }
+  | { t: "done";     m: ReplyMetadata }
+  | { t: "error";    d: string };
 
 export class ApiError extends Error {
   constructor(
