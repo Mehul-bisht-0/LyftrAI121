@@ -24,6 +24,8 @@ def test_settings(tmp_path):
         database_url=f"sqlite:///{db_path}",
         allowed_origins="http://localhost:3000",
         enable_failure_simulation=True,
+        enable_rate_limiting=False,   # prevent test requests from hitting the limit
+        enable_injection_detection=False,  # security tests use their own fixture
     )
 
 

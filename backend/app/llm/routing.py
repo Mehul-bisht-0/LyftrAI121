@@ -24,8 +24,13 @@ class AllProvidersUnavailableError(Exception):
     pass
 
 
-def build_router(specs: list[DeploymentSpec]):
+def build_router(settings):
+    """Build a LiteLLM Router from a Settings instance (or list of DeploymentSpecs)."""
     from litellm import Router
+
+    # Accept both Settings and bare list[DeploymentSpec] for test compatibility
+    specs = settings.deployment_specs if hasattr(settings, "deployment_specs") else settings
+    max_tokens = getattr(settings, "max_tokens_per_response", 512)
 
     model_list = [
         {
@@ -33,6 +38,7 @@ def build_router(specs: list[DeploymentSpec]):
             "litellm_params": {
                 "model": spec.model,
                 "api_key": spec.secret,
+                "max_tokens": max_tokens,
             },
         }
         for spec in specs
@@ -52,7 +58,7 @@ def _model_to_spec_index(model: str, specs: list[DeploymentSpec]) -> int:
     for i, spec in enumerate(specs):
         if spec.model == model:
             return i
-        # Suffix match: "llama-3.1-8b-instant" matches "groq/llama-3.1-8b-instant"
+        # Suffix match: "qwen3.8-27b" matches "groq/qwen/qwen3.8-27b"
         suffix = spec.model.split("/")[-1]
         if model == suffix or model.endswith("/" + suffix):
             return i
@@ -63,11 +69,12 @@ async def complete(
     router,
     specs: list[DeploymentSpec],
     messages: list[dict],
+    max_tokens: int = 512,
     sim: Optional[SimulationPlan] = None,
 ) -> ResolvedAnswer:
     if sim is None:
         return await _normal_complete(router, specs, messages)
-    return await _simulated_complete(specs, messages, sim)
+    return await _simulated_complete(specs, messages, sim, max_tokens)
 
 
 async def _normal_complete(
@@ -89,7 +96,7 @@ async def _normal_complete(
     actual_model: str = resp.model or specs[0].model
     spec_index = _model_to_spec_index(actual_model, specs)
     key_id = specs[spec_index].key_id
-    fallback_attempts = spec_index  # 0 for primary, 1 for first fallback, etc.
+    fallback_attempts = spec_index
 
     usage = resp.usage
     input_tokens = getattr(usage, "prompt_tokens", 0) or 0
@@ -110,6 +117,7 @@ async def _simulated_complete(
     specs: list[DeploymentSpec],
     messages: list[dict],
     sim: SimulationPlan,
+    max_tokens: int = 512,
 ) -> ResolvedAnswer:
     fallback_attempts = 0
     last_error: Exception | None = None
@@ -128,6 +136,7 @@ async def _simulated_complete(
                 model=spec.model,
                 messages=messages,
                 api_key=spec.secret,
+                max_tokens=max_tokens,
                 cache={"no-cache": True, "no-store": True},
             )
         except Exception as exc:

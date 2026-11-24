@@ -13,4 +13,6 @@ COPY app/ ./app/
 USER app
 EXPOSE 8000
 # Shell form required: Railway injects $PORT; exec array does not expand env vars.
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
+# --limit-concurrency: cap concurrent requests to mitigate HTTP/2 rapid-reset (CVE-2023-44487).
+# --timeout-keep-alive: close idle keep-alive connections quickly to reduce attack surface.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --limit-concurrency 50 --timeout-keep-alive 5

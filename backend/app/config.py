@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000"
     enable_failure_simulation: bool = False
 
+    # Security
+    enable_rate_limiting: bool = True
+    # slowapi limit string — e.g. "10/minute", "10/minute;100/hour"
+    chat_rate_limit: str = "10/minute"
+    # Hard cap on LLM output tokens to prevent runaway credit burn
+    max_tokens_per_response: int = 512
+    # Reject messages containing known prompt-injection patterns
+    enable_injection_detection: bool = True
+
     @property
     def deployment_specs(self) -> list[DeploymentSpec]:
         return [

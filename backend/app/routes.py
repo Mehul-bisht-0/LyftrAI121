@@ -16,8 +16,19 @@ from app.contracts import (
 )
 from app.llm.attempts import parse_simulation
 from app.llm.routing import AllProvidersUnavailableError
+from app.security import detect_injection, limiter, sanitize_input
 
 router = APIRouter()
+
+# slowapi calls limit provider callables with zero arguments, so we store the
+# active limit string in a module-level variable.  create_app() overwrites this
+# with settings.chat_rate_limit at startup; env-var fallback covers bare uvicorn.
+import os as _os
+_CHAT_RATE_LIMIT: str = _os.getenv("CHAT_RATE_LIMIT", "10/minute")
+
+
+def _chat_rate_limit() -> str:
+    return _CHAT_RATE_LIMIT
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -34,6 +45,7 @@ async def health(request: Request) -> HealthResponse:
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit(_chat_rate_limit)
 async def chat(
     body: ChatRequest,
     request: Request,
@@ -45,6 +57,27 @@ async def chat(
     settings = request.app.state.settings
     service = request.app.state.chat_service
 
+    # --- Input sanitization ---
+    sanitized_message = sanitize_input(body.message)
+    sanitized_prompt = sanitize_input(body.system_prompt) if body.system_prompt else None
+
+    # --- Prompt-injection detection ---
+    if settings.enable_injection_detection:
+        if detect_injection(sanitized_message) or (
+            sanitized_prompt and detect_injection(sanitized_prompt)
+        ):
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Message rejected: potentially unsafe content detected."},
+            )
+
+    # Rebuild request with sanitized values
+    body = body.model_copy(update={
+        "message": sanitized_message,
+        "system_prompt": sanitized_prompt,
+    })
+
+    # --- Failure simulation parsing ---
     sim = None
     if x_simulate_failure is not None and settings.enable_failure_simulation:
         try:
@@ -67,7 +100,11 @@ async def chat(
         )
 
 
-@router.get("/sessions/{session_id}/messages", response_model=HistoryResponse, response_model_exclude_none=True)
+@router.get(
+    "/sessions/{session_id}/messages",
+    response_model=HistoryResponse,
+    response_model_exclude_none=True,
+)
 async def get_messages(
     session_id: str, request: Request
 ) -> HistoryResponse:
