@@ -1,3 +1,4 @@
+import { Zap, Radio, Clock, Layers, Key, GitBranch } from "lucide-react";
 import type { ReplyMetadata } from "../types";
 
 interface Props {
@@ -5,49 +6,119 @@ interface Props {
   metadata: ReplyMetadata;
 }
 
+function MetaChip({
+  icon: Icon,
+  value,
+  accent,
+  testId,
+}: {
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  value: string;
+  accent?: boolean;
+  testId: string;
+}) {
+  return (
+    <span
+      data-testid={testId}
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+      style={
+        accent
+          ? {
+              color: "hsl(var(--success))",
+              borderColor: "hsl(var(--success) / 0.2)",
+              background: "hsl(var(--success) / 0.08)",
+            }
+          : {
+              color: "hsl(var(--text-dim))",
+              borderColor: "hsl(var(--border-dim))",
+              background: "hsl(var(--elevated))",
+            }
+      }
+    >
+      <Icon size={10} strokeWidth={2.5} />
+      {value}
+    </span>
+  );
+}
+
 export function AssistantMessage({ content, metadata }: Props) {
   const isCache = metadata.resolution_source === "LLM_CACHE";
+  const modelShort = metadata.model.split("/").pop() ?? metadata.model;
+  const hasFallback = metadata.fallback_attempts > 0;
 
   return (
     <div
       data-testid="assistant-message"
-      className="flex flex-col gap-2 max-w-[80%]"
+      className="flex items-end gap-2 max-w-[80%]"
     >
-      {/* Reply bubble */}
-      <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-        {content}
+      {/* Relay AI avatar */}
+      <div
+        className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0 mb-1"
+        style={{
+          background: "linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(239 90% 55%) 100%)",
+        }}
+        aria-hidden="true"
+      >
+        R
       </div>
 
-      {/* Metadata panel */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 px-1 text-xs text-gray-400">
-        <span
-          data-testid="metadata-source"
-          className={`font-medium ${isCache ? "text-green-500" : "text-blue-500"}`}
+      <div className="flex flex-col gap-2 min-w-0">
+        {/* Reply bubble */}
+        <div
+          className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm leading-relaxed whitespace-pre-wrap break-words border"
+          style={{
+            background: "hsl(var(--surface))",
+            borderColor: "hsl(var(--border))",
+            color: "hsl(var(--text))",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+          }}
         >
-          {isCache ? "⚡ cache" : "🤖 live"}
-        </span>
+          {content}
+        </div>
 
-        <span data-testid="metadata-model" title="Model">
-          {metadata.model.split("/").pop()}
-        </span>
+        {/* Metadata chips row */}
+        <div className="flex flex-wrap gap-1.5 pl-0.5">
+          {/* Source — most prominent */}
+          <span
+            data-testid="metadata-source"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border"
+            style={
+              isCache
+                ? {
+                    color: "hsl(var(--success))",
+                    borderColor: "hsl(var(--success) / 0.25)",
+                    background: "hsl(var(--success) / 0.1)",
+                  }
+                : {
+                    color: "hsl(var(--accent-hi))",
+                    borderColor: "hsl(var(--accent) / 0.25)",
+                    background: "hsl(var(--accent-bg))",
+                  }
+            }
+          >
+            {isCache ? <Zap size={10} strokeWidth={2.5} /> : <Radio size={10} strokeWidth={2.5} />}
+            {isCache ? "cache" : "live"}
+          </span>
 
-        <span data-testid="metadata-latency">
-          {metadata.latency_ms}ms
-        </span>
-
-        <span data-testid="metadata-tokens">
-          {metadata.input_tokens}↑ {metadata.output_tokens}↓ tok
-        </span>
-
-        <span data-testid="metadata-key">
-          {metadata.key_id ?? "cache"}
-        </span>
-
-        <span data-testid="metadata-fallback">
-          {metadata.fallback_attempts > 0
-            ? `↩ ${metadata.fallback_attempts} fallback`
-            : "primary"}
-        </span>
+          <MetaChip icon={Layers}  value={modelShort}                    testId="metadata-model"    />
+          <MetaChip icon={Clock}   value={`${metadata.latency_ms}ms`}    testId="metadata-latency"  />
+          <MetaChip
+            icon={Layers}
+            value={`${metadata.input_tokens}↑ ${metadata.output_tokens}↓`}
+            testId="metadata-tokens"
+          />
+          <MetaChip
+            icon={Key}
+            value={metadata.key_id ?? "cache"}
+            testId="metadata-key"
+          />
+          <MetaChip
+            icon={GitBranch}
+            value={hasFallback ? `${metadata.fallback_attempts} fallback` : "primary"}
+            accent={hasFallback}
+            testId="metadata-fallback"
+          />
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Textarea } from "./ui/textarea";
-import { Button } from "./ui/button";
+import { FlaskConical, ChevronDown, ChevronUp, AlertTriangle, X } from "lucide-react";
 
 export interface ResilienceConfig {
   systemPrompt: string;
@@ -13,93 +12,153 @@ interface Props {
 }
 
 const SIM_OPTIONS = [
-  { label: "key_1 → 429", value: "key_1=429" },
-  { label: "key_2 → 429", value: "key_2=429" },
-  { label: "key_1 → 500", value: "key_1=500" },
-  { label: "All providers → 429", value: "*=429" },
-  { label: "All providers → 503", value: "*=503" },
+  { label: "key_1 → 429",   value: "key_1=429",  color: "warn" },
+  { label: "key_2 → 429",   value: "key_2=429",  color: "warn" },
+  { label: "key_1 → 500",   value: "key_1=500",  color: "error" },
+  { label: "All → 429",     value: "*=429",      color: "error" },
+  { label: "All → 503",     value: "*=503",      color: "error" },
 ];
 
 export function ResilienceLab({ config, onChange }: Props) {
   const [open, setOpen] = useState(false);
-
-  function setSystemPrompt(value: string) {
-    onChange({ ...config, systemPrompt: value });
-  }
-
-  function toggleSim(value: string) {
-    if (config.simulationHeader === value) {
-      onChange({ ...config, simulationHeader: "" });
-    } else {
-      onChange({ ...config, simulationHeader: value });
-    }
-  }
-
-  function clearSim() {
-    onChange({ ...config, simulationHeader: "" });
-  }
+  const hasActive = !!config.simulationHeader;
 
   return (
-    <div className="border-b border-gray-200 bg-gray-50">
+    <div
+      className="shrink-0 border-b"
+      style={{
+        background: "hsl(var(--surface))",
+        borderColor: "hsl(var(--border-dim))",
+      }}
+    >
+      {/* Toggle row */}
       <button
-        className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-2.5 text-xs font-medium transition-colors duration-150"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        style={{ color: "hsl(var(--text-muted))" }}
+        onMouseEnter={(e) =>
+          ((e.currentTarget as HTMLButtonElement).style.background = "hsl(var(--hover))")
+        }
+        onMouseLeave={(e) =>
+          ((e.currentTarget as HTMLButtonElement).style.background = "")
+        }
       >
-        <span>Resilience Lab {config.simulationHeader ? "🔴" : ""}</span>
-        <span>{open ? "▲" : "▼"}</span>
+        <span className="flex items-center gap-2">
+          <FlaskConical size={13} strokeWidth={2} />
+          Resilience Lab
+          {hasActive && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold"
+              style={{
+                background: "hsl(var(--error) / 0.12)",
+                color: "hsl(var(--error))",
+              }}
+            >
+              <AlertTriangle size={9} strokeWidth={2.5} />
+              {config.simulationHeader}
+            </span>
+          )}
+        </span>
+        {open
+          ? <ChevronUp size={13} strokeWidth={2} />
+          : <ChevronDown size={13} strokeWidth={2} />
+        }
       </button>
 
+      {/* Expanded content */}
       {open && (
-        <div className="px-4 pb-4 space-y-4">
-          {/* System prompt */}
+        <div
+          className="px-5 pb-4 pt-1 space-y-4 border-t"
+          style={{ borderColor: "hsl(var(--border-dim))" }}
+        >
+          {/* Supplemental context */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              Supplemental Context
-              <span className="ml-1 text-gray-400 font-normal">(appended after core guardrails — cannot override them)</span>
+            <label
+              className="block text-xs font-medium mb-1.5"
+              style={{ color: "hsl(var(--text-muted))" }}
+            >
+              Supplemental context
+              <span className="ml-1 font-normal" style={{ color: "hsl(var(--text-dim))" }}>
+                · appended after core guardrails
+              </span>
             </label>
-            <Textarea
+            <textarea
               value={config.systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
+              onChange={(e) => onChange({ ...config, systemPrompt: e.target.value })}
               placeholder="Optional extra context for the AI…"
-              className="text-sm min-h-[60px]"
               rows={2}
+              className="w-full resize-none rounded-lg border px-3 py-2 text-xs outline-none transition-colors"
+              style={{
+                background: "hsl(var(--elevated))",
+                borderColor: "hsl(var(--border))",
+                color: "hsl(var(--text))",
+              }}
+              onFocus={(e) =>
+                (e.currentTarget.style.borderColor = "hsl(var(--accent) / 0.5)")
+              }
+              onBlur={(e) =>
+                (e.currentTarget.style.borderColor = "hsl(var(--border))")
+              }
             />
           </div>
 
           {/* Failure simulation */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              Failure Simulation (X-Simulate-Failure)
+            <label
+              className="block text-xs font-medium mb-1.5"
+              style={{ color: "hsl(var(--text-muted))" }}
+            >
+              Failure simulation
+              <span className="ml-1 font-normal" style={{ color: "hsl(var(--text-dim))" }}>
+                · sends X-Simulate-Failure header
+              </span>
             </label>
             <div className="flex flex-wrap gap-2">
-              {SIM_OPTIONS.map((opt) => (
+              {SIM_OPTIONS.map((opt) => {
+                const isActive = config.simulationHeader === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() =>
+                      onChange({
+                        ...config,
+                        simulationHeader: isActive ? "" : opt.value,
+                      })
+                    }
+                    className="px-2.5 py-1 rounded-md text-xs font-medium border transition-all duration-150"
+                    style={
+                      isActive
+                        ? {
+                            background: "hsl(var(--error) / 0.15)",
+                            borderColor: "hsl(var(--error) / 0.4)",
+                            color: "hsl(var(--error))",
+                          }
+                        : {
+                            background: "hsl(var(--elevated))",
+                            borderColor: "hsl(var(--border))",
+                            color: "hsl(var(--text-muted))",
+                          }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+              {hasActive && (
                 <button
-                  key={opt.value}
-                  onClick={() => toggleSim(opt.value)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                    config.simulationHeader === opt.value
-                      ? "bg-red-500 text-white border-red-500"
-                      : "bg-white text-gray-600 border-gray-300 hover:border-red-400"
-                  }`}
+                  onClick={() => onChange({ ...config, simulationHeader: "" })}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium border flex items-center gap-1 transition-all duration-150"
+                  style={{
+                    background: "hsl(var(--elevated))",
+                    borderColor: "hsl(var(--border))",
+                    color: "hsl(var(--text-dim))",
+                  }}
                 >
-                  {opt.label}
-                </button>
-              ))}
-              {config.simulationHeader && (
-                <button
-                  onClick={clearSim}
-                  className="px-3 py-1 rounded-full text-xs font-medium border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
-                >
-                  Clear
+                  <X size={10} strokeWidth={2.5} /> Clear
                 </button>
               )}
             </div>
-            {config.simulationHeader && (
-              <p className="mt-1 text-xs text-red-500">
-                Active: X-Simulate-Failure: {config.simulationHeader}
-              </p>
-            )}
           </div>
         </div>
       )}
