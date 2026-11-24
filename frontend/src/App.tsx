@@ -77,13 +77,23 @@ export default function App() {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">Relay AI</h1>
-          <p className="text-xs text-gray-400">Session: {SESSION_ID.slice(0, 8)}…</p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-sm select-none">
+            R
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900 leading-none">Relay AI</h1>
+            <p className="text-xs text-gray-400 mt-0.5">Session: {SESSION_ID.slice(0, 8)}…</p>
+          </div>
         </div>
-        <span className="text-xs text-gray-400 hidden sm:block">
-          Fault-tolerant · Gemini + Groq · LiteLLM
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+            <span>●</span> Guardrails active
+          </span>
+          <span className="text-xs text-gray-400 hidden md:block">
+            Fault-tolerant · Gemini + Groq
+          </span>
+        </div>
       </header>
 
       {/* Resilience Lab (P1) */}

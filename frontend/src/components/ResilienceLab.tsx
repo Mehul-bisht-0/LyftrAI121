@@ -55,12 +55,13 @@ export function ResilienceLab({ config, onChange }: Props) {
           {/* System prompt */}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              System Prompt
+              Supplemental Context
+              <span className="ml-1 text-gray-400 font-normal">(appended after core guardrails — cannot override them)</span>
             </label>
             <Textarea
               value={config.systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="Optional system prompt…"
+              placeholder="Optional extra context for the AI…"
               className="text-sm min-h-[60px]"
               rows={2}
             />
