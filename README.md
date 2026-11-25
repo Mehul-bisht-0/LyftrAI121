@@ -83,7 +83,7 @@ VITE_API_BASE_URL=http://localhost:8000 npm run dev
 
 ### Key fallback
 
-LiteLLM Router is configured with two deployment groups: `primary` (Gemini `gemini/gemini-2.5-flash-lite`, `key_1`) and `fallback` (Groq `groq/qwen/qwen3-8b`, `key_2`). The Router's `fallbacks=[{"primary": ["fallback"]}]` setting triggers automatic failover on 429, 500, 502, 503, and timeout errors.
+LiteLLM Router is configured with two deployment groups: `primary` (Gemini `gemini/gemini-3.1-flash-lite`, `key_1`) and `fallback` (Groq `groq/qwen/qwen3.8-27b`, `key_2`). The Router's `fallbacks=[{"primary": ["fallback"]}]` setting triggers automatic failover on 429, 500, 502, 503, and timeout errors.
 
 For the `X-Simulate-Failure` test hook, the Router is bypassed entirely in favour of a manual attempt loop — this guarantees isolation (each request's simulated failures live in a `ContextVar`, invisible to other concurrent requests).
 

@@ -123,14 +123,14 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
                 : <Radio size={9} strokeWidth={2} />
               }
               <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                {isCache ? "LLM_CACHE" : "LIVE"}
+                {isCache ? "LLM_CACHE" : "LIVE_INFERENCE"}
               </span>
             </span>
 
             <MetaChip icon={Layers} value={modelShort}                     testId="meta-model"          />
-            <MetaChip icon={Clock}  value={`${metadata.latency_ms}ms`}     testId="meta-latency"        />
-            <MetaChip icon={Layers} value={`${metadata.input_tokens}in`}   testId="meta-input-tokens"   />
-            <MetaChip icon={Layers} value={`${metadata.output_tokens}out`} testId="meta-output-tokens"  />
+            <MetaChip icon={Clock}  value={`${metadata.latency_ms} ms`}     testId="meta-latency"        />
+            <MetaChip icon={Layers} value={`${metadata.input_tokens}`}     testId="meta-input-tokens"   />
+            <MetaChip icon={Layers} value={`${metadata.output_tokens}`}    testId="meta-output-tokens"  />
             <MetaChip
               icon={Key}
               value={metadata.key_id ?? "cache"}
