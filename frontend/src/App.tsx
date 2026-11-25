@@ -121,7 +121,28 @@ export default function App() {
         }}
       >
         {/* Brand wordmark */}
-        <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-2.5">
+          {/* Relay node icon */}
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 22 22"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            className="shrink-0"
+          >
+            {/* left node */}
+            <circle cx="4" cy="11" r="2.5" fill="hsl(var(--accent))" opacity="0.9" />
+            {/* connector line */}
+            <line x1="6.5" y1="11" x2="15.5" y2="11" stroke="hsl(var(--accent))" strokeWidth="1.25" strokeOpacity="0.4" strokeLinecap="round" />
+            {/* right node */}
+            <circle cx="18" cy="11" r="2.5" fill="hsl(var(--accent))" opacity="0.55" />
+            {/* top branch */}
+            <line x1="11" y1="11" x2="11" y2="5" stroke="hsl(var(--accent))" strokeWidth="1.25" strokeOpacity="0.3" strokeLinecap="round" />
+            <circle cx="11" cy="4" r="1.5" fill="hsl(var(--accent))" opacity="0.35" />
+          </svg>
+
           <div className="flex items-center gap-2 leading-none">
             <span
               className="text-sm font-bold tracking-tight select-none"
@@ -141,12 +162,6 @@ export default function App() {
               AI
             </span>
           </div>
-          <span
-            className="text-xs font-mono select-none"
-            style={{ color: "hsl(var(--text-dim))", fontFamily: "'JetBrains Mono', monospace" }}
-          >
-            #{SESSION_ID.slice(0, 8)}
-          </span>
         </div>
 
         {/* Right badges */}

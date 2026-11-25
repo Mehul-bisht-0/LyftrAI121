@@ -178,18 +178,21 @@ export function MessageList({ messages, pending, onSuggest }: Props) {
           <div className="flex justify-start animate-fade-up">
             <div className="flex items-center gap-2">
               {/* Avatar */}
-              <div
-                className="w-5 h-5 rounded-sm flex items-center justify-center text-xs shrink-0 self-end mb-1 font-mono"
-                style={{
-                  background: "hsl(var(--accent-bg))",
-                  border: "1px solid hsl(var(--accent) / 0.3)",
-                  color: "hsl(var(--accent))",
-                  fontFamily: "monospace",
-                  fontSize: "10px",
-                }}
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 22 22"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+                className="shrink-0 self-end mb-1"
               >
-                R
-              </div>
+                <circle cx="4" cy="11" r="2.5" fill="hsl(var(--accent))" opacity="0.9" />
+                <line x1="6.5" y1="11" x2="15.5" y2="11" stroke="hsl(var(--accent))" strokeWidth="1.25" strokeOpacity="0.4" strokeLinecap="round" />
+                <circle cx="18" cy="11" r="2.5" fill="hsl(var(--accent))" opacity="0.55" />
+                <line x1="11" y1="11" x2="11" y2="5" stroke="hsl(var(--accent))" strokeWidth="1.25" strokeOpacity="0.3" strokeLinecap="round" />
+                <circle cx="11" cy="4" r="1.5" fill="hsl(var(--accent))" opacity="0.35" />
+              </svg>
               <div
                 className="flex items-center gap-1 px-3.5 py-2.5 rounded-2xl rounded-tl-sm border"
                 style={{

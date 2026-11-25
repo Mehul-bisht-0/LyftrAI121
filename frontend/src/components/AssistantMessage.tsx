@@ -56,20 +56,22 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
       data-testid="assistant-message"
       className="flex items-end gap-2 max-w-[80%]"
     >
-      {/* Avatar — teal-bordered square */}
-      <div
-        className="w-5 h-5 rounded-sm flex items-center justify-center shrink-0 mb-1 font-mono text-xs"
-        style={{
-          background: "hsl(var(--accent-bg))",
-          border: "1px solid hsl(var(--accent) / 0.3)",
-          color: "hsl(var(--accent))",
-          fontFamily: "monospace",
-          fontSize: "10px",
-        }}
+      {/* Avatar — relay node icon */}
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 22 22"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
+        className="shrink-0 mb-1"
       >
-        R
-      </div>
+        <circle cx="4" cy="11" r="2.5" fill="hsl(var(--accent))" opacity="0.9" />
+        <line x1="6.5" y1="11" x2="15.5" y2="11" stroke="hsl(var(--accent))" strokeWidth="1.25" strokeOpacity="0.4" strokeLinecap="round" />
+        <circle cx="18" cy="11" r="2.5" fill="hsl(var(--accent))" opacity="0.55" />
+        <line x1="11" y1="11" x2="11" y2="5" stroke="hsl(var(--accent))" strokeWidth="1.25" strokeOpacity="0.3" strokeLinecap="round" />
+        <circle cx="11" cy="4" r="1.5" fill="hsl(var(--accent))" opacity="0.35" />
+      </svg>
 
       <div className="flex flex-col gap-1.5 min-w-0">
         {/* Reply bubble */}
