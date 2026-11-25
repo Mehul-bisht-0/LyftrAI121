@@ -13,7 +13,6 @@ from app.chat import ChatService
 from app.config import Settings
 from app.llm.routing import build_router
 from app.routes import router as api_router
-from app.security import RateLimitExceeded, limiter
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -66,9 +65,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
 
-    # Rate-limiter state (slowapi reads this from app.state)
-    app.state.limiter = limiter
-
     # Security headers on every response
     app.add_middleware(SecurityHeadersMiddleware)
 
@@ -81,25 +77,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         expose_headers=[],
     )
 
-    @app.exception_handler(RateLimitExceeded)
-    async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "Too many requests — please slow down."},
-            headers={"Retry-After": "60"},
-        )
-
     @app.exception_handler(Exception)
     async def generic_handler(request: Request, exc: Exception) -> JSONResponse:
         return JSONResponse(
             status_code=500,
             content={"detail": "internal server error"},
         )
-
-    # Propagate the configured rate limit into the route module so the
-    # zero-arg _chat_rate_limit() callable returns the right value at request time.
-    import app.routes as _routes_mod
-    _routes_mod._CHAT_RATE_LIMIT = settings.chat_rate_limit
 
     app.include_router(api_router)
     return app

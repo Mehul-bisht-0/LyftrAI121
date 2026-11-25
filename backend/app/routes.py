@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import re
 import time
+from collections import defaultdict, deque
 from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app import storage
@@ -17,20 +19,63 @@ from app.contracts import (
 )
 from app.llm.attempts import parse_simulation
 from app.llm.routing import AllProvidersUnavailableError
-from app.security import detect_injection, limiter, sanitize_input
+from app.security import detect_injection, sanitize_input
 
 router = APIRouter()
 
-# slowapi calls limit provider callables with zero arguments, so we store the
-# active limit string in a module-level variable.  create_app() overwrites this
-# with settings.chat_rate_limit at startup; env-var fallback covers bare uvicorn.
-import os as _os
-_CHAT_RATE_LIMIT: str = _os.getenv("CHAT_RATE_LIMIT", "10/minute")
+
+# ---------------------------------------------------------------------------
+# Rate limiting via FastAPI Depends (avoids slowapi decorator signature issues)
+# ---------------------------------------------------------------------------
+
+def _parse_rate(limit_str: str) -> tuple[int, float]:
+    """Parse '10/minute' -> (10, 60.0). Falls back to 10/min on bad input."""
+    m = re.match(r"(\d+)/(second|minute|hour)", limit_str)
+    if not m:
+        return 10, 60.0
+    count = int(m.group(1))
+    window = {"second": 1.0, "minute": 60.0, "hour": 3600.0}[m.group(2)]
+    return count, window
 
 
-def _chat_rate_limit() -> str:
-    return _CHAT_RATE_LIMIT
+async def _check_rate_limit(request: Request) -> None:
+    settings = request.app.state.settings
+    if not settings.enable_rate_limiting:
+        return
 
+    max_calls, window = _parse_rate(settings.chat_rate_limit)
+
+    # Per-app bucket store so test instances don't share state
+    if not hasattr(request.app.state, "_rate_buckets"):
+        request.app.state._rate_buckets = defaultdict(deque)
+
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    client_key = (
+        forwarded.split(",")[0].strip()
+        if forwarded
+        else (request.client.host if request.client else "unknown")
+    )
+
+    now = time.monotonic()
+    bucket: deque = request.app.state._rate_buckets[client_key]
+    while bucket and bucket[0] < now - window:
+        bucket.popleft()
+
+    if len(bucket) >= max_calls:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests — please slow down.",
+            headers={"Retry-After": "60"},
+        )
+    bucket.append(now)
+
+
+_RateLimit = Depends(_check_rate_limit)
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request) -> HealthResponse:
@@ -46,13 +91,13 @@ async def health(request: Request) -> HealthResponse:
 
 
 @router.post("/chat", response_model=ChatResponse)
-@limiter.limit(_chat_rate_limit)
 async def chat(
     body: ChatRequest,
     request: Request,
     x_simulate_failure: Optional[str] = Header(
         default=None, alias="X-Simulate-Failure"
     ),
+    _rate: None = _RateLimit,
 ) -> ChatResponse | JSONResponse:
     started_at = time.monotonic()
     settings = request.app.state.settings
@@ -109,10 +154,10 @@ _SSE_HEADERS = {
 
 
 @router.post("/chat/stream")
-@limiter.limit(_chat_rate_limit)
 async def chat_stream(
     body: ChatRequest,
     request: Request,
+    _rate: None = _RateLimit,
 ):
     started_at = time.monotonic()
     settings = request.app.state.settings
