@@ -48,7 +48,6 @@ function MetaChip({
 
 export function AssistantMessage({ content, metadata, streaming }: Props) {
   const isCache = metadata?.resolution_source === "LLM_CACHE";
-  const modelShort = metadata ? (metadata.model.split("/").pop() ?? metadata.model) : "";
   const hasFallback = (metadata?.fallback_attempts ?? 0) > 0;
 
   return (
@@ -127,7 +126,7 @@ export function AssistantMessage({ content, metadata, streaming }: Props) {
               </span>
             </span>
 
-            <MetaChip icon={Layers} value={modelShort}                     testId="meta-model"          />
+            <MetaChip icon={Layers} value={metadata.model}                  testId="meta-model"          />
             <MetaChip icon={Clock}  value={`${metadata.latency_ms} ms`}     testId="meta-latency"        />
             <MetaChip icon={Layers} value={`${metadata.input_tokens}`}     testId="meta-input-tokens"   />
             <MetaChip icon={Layers} value={`${metadata.output_tokens}`}    testId="meta-output-tokens"  />

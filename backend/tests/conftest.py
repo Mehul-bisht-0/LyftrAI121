@@ -33,7 +33,7 @@ def test_settings(tmp_path):
 def mock_answer():
     return ResolvedAnswer(
         content="Test assistant response",
-        model="gemini/gemini-2.5-flash-lite",
+        model="gemini/gemini-3.1-flash-lite",
         key_id="key_1",
         input_tokens=10,
         output_tokens=5,

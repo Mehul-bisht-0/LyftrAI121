@@ -5,7 +5,7 @@ import type { ReplyMetadata } from "../types";
 
 const liveMetadata: ReplyMetadata = {
   resolution_source: "LIVE_INFERENCE",
-  model: "gemini/gemini-2.5-flash-lite",
+  model: "gemini/gemini-3.1-flash-lite",
   latency_ms: 342,
   input_tokens: 15,
   output_tokens: 8,
@@ -15,7 +15,7 @@ const liveMetadata: ReplyMetadata = {
 
 const cacheMetadata: ReplyMetadata = {
   resolution_source: "LLM_CACHE",
-  model: "gemini/gemini-2.5-flash-lite",
+  model: "gemini/gemini-3.1-flash-lite",
   latency_ms: 4,
   input_tokens: 15,
   output_tokens: 8,
@@ -25,7 +25,7 @@ const cacheMetadata: ReplyMetadata = {
 
 const fallbackMetadata: ReplyMetadata = {
   resolution_source: "LIVE_INFERENCE",
-  model: "groq/qwen/qwen3-8b",
+  model: "groq/qwen/qwen3.8-27b",
   latency_ms: 890,
   input_tokens: 20,
   output_tokens: 12,
@@ -58,7 +58,7 @@ describe("AssistantMessage", () => {
 
   it("shows full model name", () => {
     render(<AssistantMessage content="hi" metadata={liveMetadata} />);
-    expect(screen.getByTestId("meta-model").textContent).toContain("gemini/gemini-2.5-flash-lite");
+    expect(screen.getByTestId("meta-model").textContent).toContain("gemini/gemini-3.1-flash-lite");
   });
 
   it("shows null key_id as 'cache'", () => {

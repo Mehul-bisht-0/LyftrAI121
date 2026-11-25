@@ -9,7 +9,7 @@ def test_chat_returns_all_metadata_fields(client):
     assert resp.status_code == 200
     meta = resp.json()["metadata"]
     assert meta["resolution_source"] == "LIVE_INFERENCE"
-    assert meta["model"] == "gemini/gemini-2.5-flash-lite"
+    assert meta["model"] == "gemini/gemini-3.1-flash-lite"
     assert meta["key_id"] == "key_1"
     assert meta["fallback_attempts"] == 0
     assert meta["latency_ms"] >= 0
@@ -40,10 +40,10 @@ def test_multi_turn_context(client, mocker):
     from app.llm.routing import ResolvedAnswer
 
     answers = [
-        ResolvedAnswer(content="My name is Relay.", model="gemini/gemini-2.5-flash-lite",
+        ResolvedAnswer(content="My name is Relay.", model="gemini/gemini-3.1-flash-lite",
                        key_id="key_1", input_tokens=10, output_tokens=5,
                        cache_hit=False, fallback_attempts=0),
-        ResolvedAnswer(content="Your name is Relay.", model="gemini/gemini-2.5-flash-lite",
+        ResolvedAnswer(content="Your name is Relay.", model="gemini/gemini-3.1-flash-lite",
                        key_id="key_1", input_tokens=20, output_tokens=5,
                        cache_hit=False, fallback_attempts=0),
     ]
